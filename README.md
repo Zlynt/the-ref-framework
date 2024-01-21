@@ -1,6 +1,8 @@
 # REF
 The React Engine Framework for Express
 
+> ***NOTE:*** This framework is not ready for production
+
 ## About
 REF is a template engine for Express, making Express able to provide Server-Sided rendered React.
 
@@ -10,5 +12,3 @@ With REx, we can controll if we want full server sided render or partial.
 
 Features:
 - Server-side rendering
-
-> ***NOTE:*** This framework is not ready for production
