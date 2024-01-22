@@ -1,7 +1,7 @@
 # REF
 The React Engine Framework for Express
 
-> ***NOTE:*** This framework is not ready for production and for now is just a Proof of Concept. In a near future it will work in production
+> ***NOTE:*** This framework is not ready for production and for now, is just a Proof of Concept. Soon it will be ready for production
 
 ## About
 REF is a template engine for Express, making Express able to provide server-side rendered React.
