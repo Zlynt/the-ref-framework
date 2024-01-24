@@ -3,7 +3,7 @@ name: Publish package to NPM Packages
 on:
     push:
       branches:
-        - master
+        - main
 
 jobs:
   build:
@@ -20,6 +20,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           # Defaults to the user or organization that owns the workflow file
           scope: '@octocat'
+      - run: npm i
       - run: npm run build
       - run: npm ci
       - run: npm publish

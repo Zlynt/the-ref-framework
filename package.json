@@ -1,5 +1,5 @@
 {
-  "name": "ref",
+  "name": "the-ref-framework",
   "version": "0.3.2",
   "description": "React Engine Framework for Express",
   "main": "lib/index.js",
