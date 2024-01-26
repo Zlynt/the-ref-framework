@@ -139,26 +139,18 @@ export default class RenderEngine {
       });
 
       console.log('Rendering queue size:', dynamicComponents.length);
+      let staticRender = '';
       try {
         await Promise.all(dynamicComponents);
         console.log('Finished compiling all the assets');
 
-        let staticRender = await this.compiler.renderStatic(viewPath, options);
-
-        outputFiles.forEach((fileOnList) => {
-          staticRender = staticRender.replace(
-            '</body>',
-            `<script src="${fileOnList}?rndstr=${+new Date()}"></script></body>`,
-          );
-        });
-
-        return cb(null, staticRender);
+        staticRender = await this.compiler.renderStatic(viewPath, options);
       } catch (err: any) {
         console.log('Compilation failed:', err);
 
         if (this.errorMessage) {
           return cb(null, this.errorMessage);
-        } else {
+        } else if (err.length > 0) {
           return cb(
             null,
             err.length
@@ -178,6 +170,15 @@ export default class RenderEngine {
           );
         }
       }
+
+      outputFiles.forEach((fileOnList) => {
+        staticRender = staticRender.replace(
+          '</body>',
+          `<script src="${fileOnList}?rndstr=${+new Date()}"></script></body>`,
+        );
+      });
+
+      return cb(null, staticRender);
     })();
   }
 
