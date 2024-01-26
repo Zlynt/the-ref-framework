@@ -146,28 +146,28 @@ export default class RenderEngine {
         await Promise.all(dynamicComponents);
         console.log('Finished compiling all the assets');
       } catch (err: any) {
-        console.log('Compilation failed:', err);
-
-        if (this.errorMessage) {
-          return cb(null, this.errorMessage);
-        } else if (err.length > 0) {
-          return cb(
-            null,
-            err.length
-              ? '<h1>Cannot compile required scripts</h1>' +
-                  err
-                    .map(
-                      (errorMsg: string) =>
-                        `<p>${errorMsg
-                          .toString()
-                          .replace(
-                            /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-                            '',
-                          )}</p>`,
-                    )
-                    .join('<br/>')
-              : err.toString(),
-          );
+        if (err.length > 0) {
+          if (this.errorMessage) {
+            return cb(null, this.errorMessage);
+          } else {
+            return cb(
+              null,
+              err.length
+                ? '<h1>Cannot compile required scripts</h1>' +
+                    err
+                      .map(
+                        (errorMsg: string) =>
+                          `<p>${errorMsg
+                            .toString()
+                            .replace(
+                              /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+                              '',
+                            )}</p>`,
+                      )
+                      .join('<br/>')
+                : err.toString(),
+            );
+          }
         }
       }
 
