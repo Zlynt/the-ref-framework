@@ -1,16 +1,16 @@
-import React from "react";
-import ReactDOMServer from "react-dom/server";
-import { webpack } from "webpack";
-import path from "path";
-import fs from "fs-extra";
-import { html as beautifyHTML } from "js-beautify";
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
+import { webpack } from 'webpack';
+import path from 'path';
+import fs from 'fs-extra';
+import { html as beautifyHTML } from 'js-beautify';
 
 //#region HTML Document Version definitions
-type documentVersionsHeaderType = "HTML 5" | "HTML 4.01" | "XHTML 1.1";
+type documentVersionsHeaderType = 'HTML 5' | 'HTML 4.01' | 'XHTML 1.1';
 const documentVersionsHeaderList = {
-  "HTML 5": `<!DOCTYPE html>`,
-  "HTML 4.01": `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">`,
-  "XHTML 1.1": `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">`,
+  'HTML 5': `<!DOCTYPE html>`,
+  'HTML 4.01': `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">`,
+  'XHTML 1.1': `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">`,
 };
 //#endregion
 
@@ -23,31 +23,31 @@ interface DefaultSettings {
 }
 const defaultSettings: DefaultSettings = {
   beautify: false,
-  documentVersionsHeader: documentVersionsHeaderList["HTML 5"],
+  documentVersionsHeader: documentVersionsHeaderList['HTML 5'],
   babel: {
     presets: [
       [
-        "@babel/preset-env",
+        '@babel/preset-env',
         {
           loose: true,
-          modules: "amd",
+          modules: 'amd',
         },
       ],
       [
-        "@babel/preset-react",
+        '@babel/preset-react',
         {
-          runtime: "automatic",
+          runtime: 'automatic',
         },
       ],
     ],
-    sourceType: "unambiguous",
-    plugins: ["@babel/transform-flow-strip-types"],
+    sourceType: 'unambiguous',
+    plugins: ['@babel/transform-flow-strip-types'],
   },
 };
 defaultSettings.webpack = {
-  mode: "production",
+  mode: 'production',
   resolve: {
-    extensions: ["", ".js", ".jsx", ".tsx", ".ts"],
+    extensions: ['', '.js', '.jsx', '.tsx', '.ts'],
   },
   module: {
     rules: [
@@ -56,7 +56,7 @@ defaultSettings.webpack = {
         exclude: /node_modules/,
         use: [
           {
-            loader: "ts-loader",
+            loader: 'ts-loader',
           },
         ],
       },
@@ -94,24 +94,17 @@ export default class Compiler {
   private documentVersion: string;
 
   constructor(params: CompilerConstructorParams) {
-    const {
-      babelSettings,
-      webpackSettings,
-      useBeautify: beautify,
-      documentVersion,
-    } = params;
+    const { babelSettings, webpackSettings, useBeautify: beautify, documentVersion } = params;
     // Setup Babel
     this.babelSettings = babelSettings ? babelSettings : defaultSettings.babel;
     // Setup WebPack
-    this.webpackSettings = webpackSettings
-      ? webpackSettings
-      : defaultSettings.webpack;
+    this.webpackSettings = webpackSettings ? webpackSettings : defaultSettings.webpack;
     // Setup Beautify
     this.useBeautify = beautify ? beautify : defaultSettings.beautify;
     // Setup document version to be used
     this.documentVersion = documentVersion
       ? documentVersionsHeaderList[documentVersion]
-      : documentVersionsHeaderList["HTML 5"];
+      : documentVersionsHeaderList['HTML 5'];
 
     // Bind all the methods accessing current instance
     this.getWebpackCompiler = this.getWebpackCompiler.bind(this);
@@ -128,7 +121,7 @@ export default class Compiler {
         ...this.webpackSettings,
         entry: inputFile,
         output: {
-          path: path.join(outputFile, ".."),
+          path: path.join(outputFile, '..'),
           filename: path.basename(outputFile),
         },
       };
@@ -138,6 +131,11 @@ export default class Compiler {
           reject(err);
           return undefined;
         }
+        if (res?.compilation.errors) {
+          reject(res?.compilation.errors);
+          return undefined;
+        }
+        console.log('Built:', inputFile, outputFile);
         resolve(undefined);
         return undefined;
       });
@@ -145,27 +143,18 @@ export default class Compiler {
   }
 
   // Build a static html page
-  async buildStatic(
-    inputFile: string,
-    outputFile: string,
-    options: RenderParams["options"]
-  ) {
+  async buildStatic(inputFile: string, outputFile: string, options: RenderParams['options']) {
     await fs.writeFile(outputFile, await this.renderStatic(inputFile, options));
   }
 
   // Render an html (Usefull for server-side rendering)
-  async renderStatic(
-    inputFile: RenderParams["path"],
-    options: RenderParams["options"]
-  ) {
+  async renderStatic(inputFile: RenderParams['path'], options: RenderParams['options']) {
     // Load the requested path
     let rendererView: any = require(inputFile);
     // Transpiled ES6 may export components as { default: Component }
     rendererView = rendererView.default || rendererView;
 
-    let renderer =
-      this.documentVersion +
-      ReactDOMServer.renderToString(React.createElement(rendererView, options));
+    let renderer = this.documentVersion + ReactDOMServer.renderToString(React.createElement(rendererView, options));
     if (this.useBeautify) {
       renderer = beautifyHTML(renderer);
     }

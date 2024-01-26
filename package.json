@@ -1,6 +1,6 @@
 {
   "name": "the-ref-framework",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "React Engine Framework for Express",
   "main": "lib/index.js",
   "author": "Zlynt <contact@zlyntlab.com> (https://zlyntlab.com)",
@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
     "test": "npm run build && nodemon test/index.ts",
-    "dev": "nodemon test/index.ts"
+    "dev": "cross-env NODE_ENV=development npx nodemon -r dotenv/config example/hello-world/src/index.ts"
   },
   "repository": {
     "type": "git",
