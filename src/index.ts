@@ -141,10 +141,10 @@ export default class RenderEngine {
       console.log('Rendering queue size:', dynamicComponents.length);
       let staticRender = '';
       try {
+        staticRender = await this.compiler.renderStatic(viewPath, options);
+
         await Promise.all(dynamicComponents);
         console.log('Finished compiling all the assets');
-
-        staticRender = await this.compiler.renderStatic(viewPath, options);
       } catch (err: any) {
         console.log('Compilation failed:', err);
 
