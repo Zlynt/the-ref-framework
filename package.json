@@ -1,6 +1,6 @@
 {
   "name": "the-ref-framework",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "React Engine Framework for Express",
   "main": "lib/index.js",
   "author": "Zlynt <contact@zlyntlab.com> (https://zlyntlab.com)",
