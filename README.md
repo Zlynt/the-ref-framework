@@ -15,8 +15,9 @@ Features:
 > npm i the-ref-framework
 
 ## Example
-> ***NOTE:*** I will be posting soon a project template
+> Model-View-Controller using Express and REF (Github repo [here](https://github.com/Zlynt/the-ref-framework-examples))
 
+## How to connect REF to Express server
 ```
 import express from "express";
 import RenderEngine from "the-ref-framework";
