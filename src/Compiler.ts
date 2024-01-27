@@ -44,33 +44,44 @@ const defaultSettings: DefaultSettings = {
     plugins: ['@babel/transform-flow-strip-types'],
   },
 };
-defaultSettings.webpack = {
-  mode: 'production',
-  resolve: {
-    extensions: ['', '.js', '.jsx', '.tsx', '.ts'],
-  },
-  module: {
-    rules: [
-      {
-        test: /\.(ts|js)x?$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader',
-          },
-        ],
-      },
-      /*{
-        test: /\.(js|ts)x?$/,
-        exclude: /node_modules/,
-        use: {
-          loader: "babel-loader",
-          options: defaultRenderEngineSettings.babel,
+function getDefaultWebpackSettings({ rootDir }: { rootDir: string }) {
+  return {
+    mode: 'production',
+    resolve: {
+      extensions: ['', '.js', '.jsx', '.tsx', '.ts'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.(ts|js)x?$/,
+          exclude: /node_modules/,
+          use: [
+            {
+              rootDir: rootDir,
+              loader: 'ts-loader',
+              compilerOptions: {
+                jsx: 'react-jsx',
+                target: 'ES6',
+                esModuleInterop: true,
+                module: 'CommonJS',
+                strict: true,
+                resolveJsonModule: true,
+              },
+            },
+          ],
         },
-      },*/
-    ],
-  },
-};
+        /*{
+          test: /\.(js|ts)x?$/,
+          exclude: /node_modules/,
+          use: {
+            loader: "babel-loader",
+            options: defaultRenderEngineSettings.babel,
+          },
+        },*/
+      ],
+    },
+  };
+}
 //#endregion
 
 //#region Other definitions
@@ -86,6 +97,7 @@ interface CompilerConstructorParams {
   documentVersion: documentVersionsHeaderType;
   babelSettings: any;
   webpackSettings: any;
+  viewsPath: string;
 }
 export default class Compiler {
   private useBeautify: boolean;
@@ -94,11 +106,11 @@ export default class Compiler {
   private documentVersion: string;
 
   constructor(params: CompilerConstructorParams) {
-    const { babelSettings, webpackSettings, useBeautify: beautify, documentVersion } = params;
+    const { babelSettings, webpackSettings, useBeautify: beautify, documentVersion, viewsPath } = params;
     // Setup Babel
     this.babelSettings = babelSettings ? babelSettings : defaultSettings.babel;
     // Setup WebPack
-    this.webpackSettings = webpackSettings ? webpackSettings : defaultSettings.webpack;
+    this.webpackSettings = webpackSettings ? webpackSettings : getDefaultWebpackSettings({ rootDir: viewsPath });
     // Setup Beautify
     this.useBeautify = beautify ? beautify : defaultSettings.beautify;
     // Setup document version to be used
@@ -116,7 +128,7 @@ export default class Compiler {
   // Build a dynamic component and save it into a file
   async build(inputFile: string, outputFile: string) {
     return new Promise((resolve, reject) => {
-      console.log(this.webpackSettings);
+      // console.log(this.webpackSettings);
       let compileParameters = {
         ...this.webpackSettings,
         entry: inputFile,
@@ -135,7 +147,7 @@ export default class Compiler {
           reject(res?.compilation.errors);
           return undefined;
         }
-        console.log('Built:', inputFile, outputFile);
+        // console.log('Built:', inputFile, outputFile);
         resolve(undefined);
         return undefined;
       });

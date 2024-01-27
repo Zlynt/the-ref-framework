@@ -6,10 +6,8 @@ The React Engine Framework for Express
 ## About
 REF is a template engine for Express, making Express able to provide server-side rendered React.
 
-With REF, we can control if we want full server-sided render or partial.
-
 Features:
-- Partial or full server-side rendering
+- Server-side rendering
 
 ## Installing
 > npm i the-ref-framework

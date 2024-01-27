@@ -38,11 +38,16 @@ export default class RenderEngine {
   constructor(params: RenderEngineConstructor) {
     console.log("Welcome to REF: The React Engine Framework for Express");
 
+    // Initialize location of the Views
+    this.viewsPath = String(params.viewsPath).toString();
+    console.log("[Expressact] Views path set to", this.viewsPath);
+
     this.compiler = new Compiler({
       useBeautify: true,
       documentVersion: "HTML 5",
       babelSettings: params.babelSettings,
       webpackSettings: params.webpackSettings,
+      viewsPath: this.viewsPath
     });
 
     // Define Engine type
@@ -67,9 +72,6 @@ export default class RenderEngine {
         : "Server side error, please check logs for more information";
     }
 
-    // Initialize location of the Views
-    this.viewsPath = String(params.viewsPath).toString();
-    console.log("[Expressact] Views path set to", this.viewsPath);
 
     // Initialize regex to remove cached files on development
     this.moduleDetectRegEx = new RegExp(
