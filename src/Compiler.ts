@@ -44,7 +44,7 @@ const defaultSettings: DefaultSettings = {
     plugins: ['@babel/transform-flow-strip-types'],
   },
 };
-function getDefaultWebpackSettings({ rootDir }: { rootDir: string }) {
+function getDefaultWebpackSettings() {
   return {
     mode: 'production',
     resolve: {
@@ -57,16 +57,7 @@ function getDefaultWebpackSettings({ rootDir }: { rootDir: string }) {
           exclude: /node_modules/,
           use: [
             {
-              rootDir: rootDir,
               loader: 'ts-loader',
-              compilerOptions: {
-                jsx: 'react-jsx',
-                target: 'ES6',
-                esModuleInterop: true,
-                module: 'CommonJS',
-                strict: true,
-                resolveJsonModule: true,
-              },
             },
           ],
         },
@@ -110,7 +101,7 @@ export default class Compiler {
     // Setup Babel
     this.babelSettings = babelSettings ? babelSettings : defaultSettings.babel;
     // Setup WebPack
-    this.webpackSettings = webpackSettings ? webpackSettings : getDefaultWebpackSettings({ rootDir: viewsPath });
+    this.webpackSettings = webpackSettings ? webpackSettings : getDefaultWebpackSettings();
     // Setup Beautify
     this.useBeautify = beautify ? beautify : defaultSettings.beautify;
     // Setup document version to be used
@@ -138,7 +129,7 @@ export default class Compiler {
         },
       };
       const compiler = webpack(compileParameters);
-      compiler.run((err, res) => {
+      compiler.run((err?: null | Error, res?: any) => {
         if (err) {
           reject(err);
           return undefined;
