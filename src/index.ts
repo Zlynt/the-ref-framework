@@ -16,15 +16,14 @@ const jsxOrTsxConstants = {
   "JavaScript XML": "jsx",
   "TypeScript XML": "tsx",
 };
-type jsxOrTsxConstantsTypes = "JavaScript XML" | "TypeScript XML";
+export type jsxOrTsxConstantsTypes = "JavaScript XML" | "TypeScript XML";
 
 interface RenderEngineConstructor {
   viewsPath: string; // Path to the folder containing all the views
   errorMessage?: string; // Error returned to the client, when not in development environment, when could not render correctly
   jsxOrTsx: jsxOrTsxConstantsTypes; // Are we rendering JavaScript or TypeScript XML?
   expressApp: ExpressInterface;
-  babelSettings?: any; // Options for babel (optional)
-  webpackSettings?: any; // Options for Webpack (opcional)
+  addons?: Array<any>; // Addons
 }
 
 export default class RenderEngine {
@@ -42,14 +41,6 @@ export default class RenderEngine {
     this.viewsPath = String(params.viewsPath).toString();
     console.log("[Expressact] Views path set to", this.viewsPath);
 
-    this.compiler = new Compiler({
-      useBeautify: true,
-      documentVersion: "HTML 5",
-      babelSettings: params.babelSettings,
-      webpackSettings: params.webpackSettings,
-      viewsPath: this.viewsPath
-    });
-
     // Define Engine type
     switch (params.jsxOrTsx) {
       case "TypeScript XML":
@@ -62,6 +53,21 @@ export default class RenderEngine {
         break;
     }
 
+    // Configure the static folder for caching built JavaScript Files
+    this.cacheFolderPath = path.join(process.cwd(), ".refCache");
+    if (process.env.NODE_ENV === "development") {
+      fs.removeSync(this.cacheFolderPath);
+    }
+    fs.ensureDirSync(this.cacheFolderPath);
+
+    this.compiler = new Compiler({
+      documentVersion: "HTML 5",
+      addons: params.addons,
+      viewsPath: this.viewsPath,
+      jsxOrTsx: this.jsxOrTsx,
+      cacheLocation: this.cacheFolderPath,
+    });
+
     // Initialize error message
     if (
       process.env.NODE_ENV !== "development" ||
@@ -71,7 +77,6 @@ export default class RenderEngine {
         ? params.errorMessage
         : "Server side error, please check logs for more information";
     }
-
 
     // Initialize regex to remove cached files on development
     this.moduleDetectRegEx = new RegExp(
@@ -89,10 +94,6 @@ export default class RenderEngine {
     params.expressApp.set("view engine", this.getEngineType());
     params.expressApp.engine(this.getEngineType(), this.render);
 
-    // Configure the static folder for caching built JavaScript Files
-    this.cacheFolderPath = path.join(process.cwd(), ".expressactCache");
-    fs.removeSync(this.cacheFolderPath);
-    fs.ensureDirSync(this.cacheFolderPath);
     params.expressApp.use(
       "/assets",
       express.static(path.resolve(path.join(this.cacheFolderPath, "assets")), {
@@ -100,7 +101,7 @@ export default class RenderEngine {
       })
     );
 
-    console.log("Engine is ready");
+    console.log(`[ENGINE] Ready (environment: ${process.env.NODE_ENV})`);
   }
 
   render(
@@ -109,7 +110,7 @@ export default class RenderEngine {
     cb: RendererParams["callback"]
   ) {
     (async () => {
-      console.log("Environment?", options.settings.env);
+      // console.log("Environment?", options.settings.env);
 
       if (options.settings.env === "development") {
         // Remove all files from the module cache that are in the view folder.
@@ -133,7 +134,7 @@ export default class RenderEngine {
 
         let inputPath = path.join(viewPath, "..", `${file}`);
 
-        console.log("Possible import detected:", file, "->", inputPath);
+        // console.log("Possible import detected:", file, "->", inputPath);
 
         // Check if it is a file and the import didn't had the file extension
         const checkFileWithExtention =
@@ -155,9 +156,11 @@ export default class RenderEngine {
               .readdirSync(inputPath)
               .filter((file) => file.startsWith("index"))[0];
         } else {
-          console.log("Rejected: Not found");
+          // console.log("Rejected: Not found");
           return;
         }
+
+        console.log("To compile:", file, "->", inputPath);
 
         const compileDetails = {
           from: inputPath,
@@ -178,21 +181,26 @@ export default class RenderEngine {
             "/assets"
           )
         );
-        dynamicComponents.push(
-          this.compiler.build(compileDetails.from, compileDetails.to)
-        );
+        if (
+          process.env.NODE_ENV === "development" ||
+          !fs.existsSync(compileDetails.to)
+        ) {
+          console.log("Following component will be compiled:", file);
+          dynamicComponents.push(
+            this.compiler.build(compileDetails.from, compileDetails.to)
+          );
+        }
       });
 
-      console.log("Rendering queue size:", dynamicComponents.length);
+      console.log(`Rendering ${dynamicComponents.length} component(s)...`);
       let staticRender = "";
       try {
         staticRender = await this.compiler.renderStatic(viewPath, options);
 
         await Promise.all(dynamicComponents);
-        console.log("Finished compiling all the assets");
       } catch (err: any) {
-        console.log("Error?", err);
         if (err.length > 0) {
+          console.log("Error:", err);
           if (this.errorMessage) {
             return cb(null, this.errorMessage);
           } else {
@@ -216,11 +224,16 @@ export default class RenderEngine {
           }
         }
       }
+      console.log("Finished compiling all the components!");
 
       outputFiles.forEach((fileOnList) => {
         staticRender = staticRender.replace(
           "</body>",
-          `<script src="${fileOnList}?rndstr=${+new Date()}"></script></body>`
+          `<script src="${fileOnList}${
+            process.env.NODE_ENV === "development"
+              ? `?rndstr=${+new Date()}`
+              : ""
+          }"></script></body>`
         );
       });
 
