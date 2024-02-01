@@ -1,6 +1,6 @@
 {
   "name": "the-ref-framework",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "React Engine Framework for Express",
   "main": "lib/index.js",
   "author": "Zlynt <contact@zlyntlab.com> (https://zlyntlab.com)",
@@ -35,6 +35,7 @@
     "express": "^4.18.2",
     "fs-extra": "^11.2.0",
     "js-beautify": "^1.14.11",
+    "json-merger": "^1.1.10",
     "lodash.escaperegexp": "^4.1.2",
     "object-assign": "^4.1.1",
     "precinct": "^11.0.5",
