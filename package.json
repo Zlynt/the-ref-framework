@@ -9,7 +9,7 @@
     "build": "rimraf lib && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "test": "npm run build && nodemon test/index.ts",
-    "dev": "cross-env NODE_ENV=development npx nodemon -r dotenv/config example/hello-world/src/index.ts"
+    "dev": "cross-env NODE_ENV=development nodemon --watch src --watch example/hello-world/src --ext ts,tsx --exec \"node -r dotenv/config -r ./example/hello-world/register.js\" example/hello-world/src/index.ts"
   },
   "repository": {
     "type": "git",
