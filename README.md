@@ -148,7 +148,7 @@ TypeScript users can type the setting: `export const render: RenderMode = 'clien
 
 ## How it works
 
-When you call `res.render('home', props)`, REF loads `views/home.tsx` and checks its `render` export. Express's own keys (`settings`, `_locals`, `cache`) are left out of `props`.
+When you call `res.render('home', props)`, REF loads `views/home.tsx` and checks its `render` export. Only the object passed to `res.render()` becomes `props`. `app.locals` and `res.locals` are not passed to views, because they often hold server-only data such as the logged-in user; pass what a view needs explicitly, e.g. `res.render('home', { user: res.locals.user.name })`.
 
 1. REF bundles the view, React and everything the view imports into one script with webpack.
 2. **Server views:** REF renders the component to HTML with `renderToString` and runs each addon's `onStaticRender` on it. **Client views:** REF starts from an empty page.
