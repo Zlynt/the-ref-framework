@@ -3,3 +3,5 @@ yarn.lock
 yarn-error.log
 node_modules
 .refCache
+.env
+.env.*

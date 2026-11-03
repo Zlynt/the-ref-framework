@@ -36,14 +36,17 @@ export interface RefOptions {
 }
 
 const CACHE_DIR = path.join(process.cwd(), '.refCache');
-const EMPTY_PAGE = '<!DOCTYPE html><html><head></head><body></body></html>'; // Client views start from this
+const PROPS = Symbol('ref.props'); // Where the options passed to render() travel to the view engine
+const EMPTY_PAGE ='<!DOCTYPE html><html><head></head><body></body></html>'; // Client views start from this
 
 /** Sets up REF as the view engine of an Express app. */
 export default function ref(app: Express, options: RefOptions = {}): void {
   const viewsPath = path.resolve(options.views ?? app.get('views'));
   const extension = options.extension ?? 'tsx';
   const addons = options.addons ?? [];
-  const isDev = app.get('env') === 'development';
+  // Not app.get('env'): Express falls back to "development" when NODE_ENV is unset, which would
+  // rebuild bundles on every request on a production server that forgot to set it.
+  const isDev = process.env.NODE_ENV === 'development';
 
   // Start fresh in development, so no old bundles are served
   if (isDev) fs.rmSync(CACHE_DIR, { recursive: true, force: true });
@@ -52,11 +55,12 @@ export default function ref(app: Express, options: RefOptions = {}): void {
   const bundle = createBundler({ cacheDir: CACHE_DIR, addons, isDev });
   for (const addon of addons) addon.onStart?.({ viewsPath, jsxOrTsx: extension, cacheLocation: CACHE_DIR });
 
-  async function render(viewFile: string, locals: Record<string, any>): Promise<string> {
+  async function render(viewFile: string, locals: Record<string | symbol, any>): Promise<string> {
     if (isDev) forgetModulesIn(viewsPath); // Pick up edits to views without a restart
 
-    // Express adds its own keys to the locals; leave them out of the props
-    const { settings, _locals, cache, ...props } = locals;
+    // Only what was passed to render() becomes props. Express also merges in app.locals and
+    // res.locals, which often hold server-only data (users, sessions), so those stay on the server.
+    const props: Record<string, any> = locals[PROPS] ?? {};
 
     const view = require(viewFile);
     const mode: RenderMode = view.render ?? 'server';
@@ -69,7 +73,7 @@ export default function ref(app: Express, options: RefOptions = {}): void {
       bundle(viewFile, mode),
       mode === 'server' ? serverHtml(view.default ?? view, props) : EMPTY_PAGE,
     ]);
-    return html.replace('</body>', `${scripts(scriptUrl, props)}</body>`);
+    return beforeBodyEnd(html, scripts(scriptUrl, props));
   }
 
   /** Renders a view to HTML on the server and lets addons change it. */
@@ -78,6 +82,15 @@ export default function ref(app: Express, options: RefOptions = {}): void {
     for (const addon of addons) if (addon.onStaticRender) html = await addon.onStaticRender(html);
     return html;
   }
+
+  // res.render() calls app.render() with its options. Keep a copy of them under a private key,
+  // which survives Express merging them with app.locals and res.locals.
+  const expressRender: (...args: any[]) => void = app.render;
+  app.render = function (this: Express, name: string, options?: any, callback?: any) {
+    if (typeof options === 'function') [callback, options] = [options, {}];
+    const { _locals, cache, ...props } = options ?? {};
+    return expressRender.call(this, name, { ...options, [PROPS]: props }, callback);
+  } as Express['render'];
 
   app.engine(extension, (viewFile, locals, done) => {
     render(viewFile, locals).then((html) => done(null, html), done); // Errors go to Express's error handler
@@ -92,6 +105,15 @@ function scripts(scriptUrl: string, props: object): string {
   // Escape "<" so a prop like "</script>" can't end the tag early
   const json = JSON.stringify(props).replace(/</g, '\\u003c');
   return `<script id="ref-props" type="application/json">${json}</script><script src="${scriptUrl}"></script>`;
+}
+
+/**
+ * Inserts tags before the last "</body>". Not String.replace with a string: it would expand
+ * "$`", "$'" and "$&" found in the props, pasting raw page HTML into the props script.
+ */
+function beforeBodyEnd(html: string, tags: string): string {
+  const end = html.lastIndexOf('</body>');
+  return end === -1 ? html + tags : html.slice(0, end) + tags + html.slice(end);
 }
 
 /** Removes cached modules in a folder, so the next require() reads them from disk again. */
