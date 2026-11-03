@@ -1,7 +1,7 @@
 import Layout from '../components/Layout';
 import type { Task } from '../../models/Task';
 
-export default function TaskIndex({ tasks, error }: { tasks: Task[]; error: string | null }) {
+export default function TaskIndex({ tasks, error }: { tasks: Task[]; error?: string }) {
   const remaining = tasks.filter((task) => !task.done).length;
 
   return (

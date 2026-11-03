@@ -1,24 +1,48 @@
 import express from 'express';
 import path from 'path';
-import RenderEngine from '../../../src';
-import taskRoutes from './routes/tasks';
-import { notFound } from './controllers/TaskController';
+import ref from '../../../src';
+import Tasks from './models/Task';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-
-// View layer: REF renders the .tsx files in ./views as HTML
-new RenderEngine({
-  viewsPath: path.join(__dirname, 'views'),
-  jsxOrTsx: 'TypeScript XML',
-  expressApp: app,
-});
-
-// Parse HTML form posts into req.body
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded()); // Read HTML form posts into req.body
+ref(app, { views: path.join(__dirname, 'views') });
 
 app.get('/', (req, res) => res.redirect('/tasks'));
-app.use('/tasks', taskRoutes);
+
+app.get('/tasks', (req, res) => {
+  res.render('tasks/index', { tasks: Tasks.findAll() });
+});
+
+app.post('/tasks', (req, res) => {
+  try {
+    Tasks.create(String(req.body?.title ?? ''));
+    res.redirect('/tasks');
+  } catch (err) {
+    res.status(400).render('tasks/index', { tasks: Tasks.findAll(), error: (err as Error).message });
+  }
+});
+
+app.get('/tasks/:id', (req, res) => {
+  const task = Tasks.findById(Number(req.params.id));
+  if (!task) return notFound(req, res);
+  res.render('tasks/show', { task });
+});
+
+app.post('/tasks/:id/toggle', (req, res) => {
+  if (!Tasks.toggle(Number(req.params.id))) return notFound(req, res);
+  res.redirect('back' in req.query ? `/tasks/${req.params.id}` : '/tasks');
+});
+
+app.post('/tasks/:id/delete', (req, res) => {
+  if (!Tasks.remove(Number(req.params.id))) return notFound(req, res);
+  res.redirect('/tasks');
+});
+
 app.use(notFound);
 
-app.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
+function notFound(req: express.Request, res: express.Response) {
+  res.status(404).render('notFound', { path: req.originalUrl });
+}
+
+const port = Number(process.env.PORT) || 3000;
+app.listen(port, () => console.log(`Listening on http://localhost:${port}`));
