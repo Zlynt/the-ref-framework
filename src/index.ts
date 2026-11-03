@@ -3,7 +3,58 @@ import path from "path";
 import fs from "fs-extra";
 import _escaperegexp from "lodash.escaperegexp";
 import Compiler from "./Compiler";
-const { paperwork } = require("precinct");
+import { parse } from "@babel/parser";
+
+// List the module specifiers a file imports (import / export-from / require / dynamic import)
+function paperwork(filePath: string): string[] {
+  const ext = path.extname(filePath);
+  const plugins: any[] =
+    ext === ".ts"
+      ? ["typescript"]
+      : ext === ".tsx"
+      ? ["typescript", "jsx"]
+      : ["jsx", "flow"];
+
+  const ast = parse(fs.readFileSync(filePath, "utf8"), {
+    sourceType: "unambiguous",
+    plugins,
+  });
+
+  const found: string[] = [];
+  const visit = (node: any): void => {
+    if (!node || typeof node.type !== "string") return;
+
+    if (
+      (node.type === "ImportDeclaration" ||
+        node.type === "ExportNamedDeclaration" ||
+        node.type === "ExportAllDeclaration") &&
+      node.source
+    ) {
+      found.push(node.source.value);
+    } else if (
+      node.type === "CallExpression" &&
+      (node.callee.type === "Import" ||
+        (node.callee.type === "Identifier" && node.callee.name === "require")) &&
+      node.arguments[0]?.type === "StringLiteral"
+    ) {
+      found.push(node.arguments[0].value);
+    } else if (
+      node.type === "ImportExpression" &&
+      node.source?.type === "StringLiteral"
+    ) {
+      found.push(node.source.value);
+    }
+
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+      if (Array.isArray(value)) value.forEach(visit);
+      else if (value && typeof value === "object") visit(value);
+    }
+  };
+  visit(ast.program);
+
+  return found;
+}
 import crypto from "crypto";
 
 type RendererParams = {

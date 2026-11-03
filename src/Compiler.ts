@@ -31,7 +31,6 @@ const defaultSettings: DefaultSettings = {
       [
         "@babel/preset-env",
         {
-          loose: true,
           modules: "amd",
         },
       ],
@@ -41,9 +40,9 @@ const defaultSettings: DefaultSettings = {
           runtime: "automatic",
         },
       ],
+      "@babel/preset-typescript",
     ],
     sourceType: "unambiguous",
-    plugins: ["@babel/transform-flow-strip-types"],
   },
 };
 function getDefaultWebpackSettings() {
@@ -57,11 +56,10 @@ function getDefaultWebpackSettings() {
         {
           test: /\.(ts|js)x?$/,
           exclude: /node_modules/,
-          use: [
-            {
-              loader: "ts-loader",
-            },
-          ],
+          use: {
+            loader: "babel-loader",
+            options: defaultSettings.babel,
+          },
         },
         /*{
           test: /\.(js|ts)x?$/,
@@ -127,6 +125,14 @@ export default class Compiler {
         cacheLocation,
       });
     });
+
+    // Give webpack's babel-loader the final Babel settings (including addon changes)
+    this.webpackSettings.module.rules = this.webpackSettings.module.rules.map(
+      (rule: any) =>
+        rule.use?.loader === "babel-loader"
+          ? { ...rule, use: { ...rule.use, options: this.babelSettings } }
+          : rule
+    );
 
     // Setup document version to be used
     this.documentVersion = documentVersion
