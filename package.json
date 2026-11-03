@@ -1,8 +1,21 @@
 {
   "name": "the-ref-framework",
-  "version": "0.4.1",
-  "description": "React Engine Framework for Express",
+  "version": "0.4.2",
+  "description": "Render React components as server-side Express views. Use res.render() with .tsx or .jsx views.",
+  "keywords": [
+    "express",
+    "react",
+    "view-engine",
+    "template-engine",
+    "ssr",
+    "server-side-rendering",
+    "jsx",
+    "tsx",
+    "typescript",
+    "webpack"
+  ],
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "author": "Zlynt <contact@zlyntlab.com> (https://zlyntlab.com)",
   "license": "MIT",
   "scripts": {
