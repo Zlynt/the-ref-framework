@@ -1,7 +1,7 @@
 {
   "name": "the-ref-framework",
   "version": "0.4.2",
-  "description": "Render React components as server-side Express views. Use res.render() with .tsx or .jsx views.",
+  "description": "Use React components as Express views, rendered on the server or in the browser. Use res.render() with .tsx or .jsx views.",
   "keywords": [
     "express",
     "react",
@@ -9,6 +9,7 @@
     "template-engine",
     "ssr",
     "server-side-rendering",
+    "client-side-rendering",
     "jsx",
     "tsx",
     "typescript",
@@ -38,7 +39,6 @@
   ],
   "dependencies": {
     "@babel/core": "^8.1.0",
-    "@babel/parser": "^8.1.0",
     "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^8.0.1",
     "@babel/preset-typescript": "^8.0.7",

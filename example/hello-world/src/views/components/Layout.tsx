@@ -24,7 +24,7 @@ export default function Layout({ title, children }: { title: string; children: R
       </head>
       <body>
         <header>
-          <a href="/tasks">Task list</a>
+          <a href="/tasks">Task list</a> · <a href="/tasks/search">Search</a>
         </header>
         <main>{children}</main>
       </body>

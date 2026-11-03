@@ -1,6 +1,6 @@
 # Hello World: Express 5 + REF
 
-A small task list app. Routes are defined inline in [src/index.ts](src/index.ts), and REF renders the React views on the server.
+A small task list app. Routes are defined inline in [src/index.ts](src/index.ts). REF renders most views on the server and hydrates them in the browser; the search page renders only in the browser.
 
 ## Run it
 
@@ -23,6 +23,7 @@ src/
     components/Layout.tsx   Shared page layout
     tasks/index.tsx         Task list and "add task" form
     tasks/show.tsx          One task
+    tasks/search.tsx        Live search, rendered in the browser
     notFound.tsx            404 page
 register.js                 Lets Node load .ts/.tsx files (Babel)
 ```
@@ -33,8 +34,9 @@ register.js                 Lets Node load .ts/.tsx files (Babel)
 | ------ | ------------------- | -------------------- |
 | GET    | `/tasks`            | List tasks           |
 | POST   | `/tasks`            | Add a task           |
+| GET    | `/tasks/search`     | Search tasks         |
 | GET    | `/tasks/:id`        | Show one task        |
 | POST   | `/tasks/:id/toggle` | Mark done / not done |
 | POST   | `/tasks/:id/delete` | Delete a task        |
 
-The views use plain HTML forms, so the app works without client-side JavaScript. Tasks are kept in memory and reset when the server restarts.
+The server-rendered views use plain HTML forms, so they work without JavaScript. Once hydrated, they can add extras: the task page asks for confirmation before deleting. The search view sets `export const render = 'client'`, so it renders only in the browser and filters as you type. Tasks are kept in memory and reset when the server restarts.

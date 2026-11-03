@@ -1,72 +1,66 @@
-// Builds browser bundles for the components a view imports, using webpack and Babel.
+// Builds the browser bundle for a view, using webpack and Babel.
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { parse } from '@babel/parser';
 import { webpack, Configuration } from 'webpack';
 import type { Addon } from './addon';
+import type { RenderMode } from './index';
 
 interface BundlerOptions {
-  outputDir: string; // Where bundles are written. Served at /assets.
-  extension: 'tsx' | 'jsx';
+  cacheDir: string; // Bundles go in <cacheDir>/assets, which is served at /assets.
   addons: Addon[];
-  isDev: boolean; // In development, rebuild on every request. Otherwise build each file once.
+  isDev: boolean; // In development, rebuild on every request. Otherwise build each view once.
 }
 
-/** Returns a function that builds the bundles for a view and gives back their URLs. */
-export function createBundler({ outputDir, extension, addons, isDev }: BundlerOptions) {
-  const config = webpackConfig(addons);
+/** Returns a function that builds the browser bundle for a view and gives back its URL. */
+export function createBundler({ cacheDir, addons, isDev }: BundlerOptions) {
+  const config = webpackConfig(addons, isDev, cacheDir);
   const builds = new Map<string, Promise<void>>();
   const startedAt = Date.now();
 
-  function bundle(entry: string): Promise<string> {
-    const fileName = crypto.createHash('sha256').update(entry).digest('hex').slice(0, 16) + '.js';
+  return function bundle(viewFile: string, mode: RenderMode): Promise<string> {
+    const key = `${mode}:${viewFile}`;
+    const name = crypto.createHash('sha256').update(key).digest('hex').slice(0, 16);
 
-    if (isDev || !builds.has(entry)) {
-      const build = runWebpack({ ...config, entry, output: { path: outputDir, filename: fileName } });
-      build.catch(() => builds.delete(entry)); // Let a failed build be retried
-      builds.set(entry, build);
+    if (isDev || !builds.has(key)) {
+      const entry = writeEntry(path.join(cacheDir, 'entries', `${name}.js`), viewFile, mode);
+      const output = { path: path.join(cacheDir, 'assets'), filename: `${name}.js` };
+      const build = runWebpack({ ...config, entry, output });
+      build.catch(() => builds.delete(key)); // Let a failed build be retried
+      builds.set(key, build);
     }
 
     // The ?v= query makes browsers fetch the new file after a rebuild or restart
     const version = isDev ? Date.now() : startedAt;
-    return builds.get(entry)!.then(() => `/assets/${fileName}?v=${version}`);
-  }
-
-  return function bundleComponentsOf(viewFile: string): Promise<string[]> {
-    return Promise.all(localImports(viewFile, extension).map(bundle));
+    return builds.get(key)!.then(() => `/assets/${name}.js?v=${version}`);
   };
 }
 
-/** Lists the local component files a view imports, e.g. `import Layout from './Layout'`. */
-function localImports(file: string, extension: 'tsx' | 'jsx'): string[] {
-  const code = fs.readFileSync(file, 'utf8');
-  const plugins: ('jsx' | 'typescript')[] = extension === 'tsx' ? ['jsx', 'typescript'] : ['jsx'];
-  const ast = parse(code, { sourceType: 'module', plugins });
+/**
+ * Writes the browser entry file. It runs the view with the props the server sent:
+ * "server" pages already hold the HTML, so React hydrates them (makes them interactive);
+ * "client" pages are empty, so React renders them from scratch.
+ */
+function writeEntry(entryFile: string, viewFile: string, mode: RenderMode): string {
+  const start = mode === 'server' ? 'hydrateRoot(document, view);' : 'createRoot(document).render(view);';
+  const code = `
+import { createElement } from 'react';
+import { createRoot, hydrateRoot } from 'react-dom/client';
+import View from ${JSON.stringify(viewFile)};
 
-  const files: string[] = [];
-  for (const node of ast.program.body) {
-    if (node.type !== 'ImportDeclaration' || node.importKind === 'type') continue;
-
-    const specifier = node.source.value;
-    if (!specifier.startsWith('.')) continue; // Skip packages like 'react'
-
-    const found = resolveFile(path.resolve(path.dirname(file), specifier), extension);
-    if (found) files.push(found);
-  }
-  return files;
+const props = JSON.parse(document.getElementById('ref-props').textContent);
+const view = createElement(View, props);
+${start}
+`;
+  fs.mkdirSync(path.dirname(entryFile), { recursive: true });
+  fs.writeFileSync(entryFile, code);
+  return entryFile;
 }
 
-/** Finds the component file an import points to: `./Layout`, `./Layout.tsx` or `./Layout/index.tsx`. */
-function resolveFile(base: string, extension: string): string | undefined {
-  const candidates = [base, `${base}.${extension}`, path.join(base, `index.${extension}`)];
-  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
-}
-
-function webpackConfig(addons: Addon[]): Configuration {
+function webpackConfig(addons: Addon[], isDev: boolean, cacheDir: string): Configuration {
   let babel: object = {
     presets: [
-      ['@babel/preset-env', { modules: 'amd' }],
+      ['@babel/preset-env', { modules: false }], // Leave imports to webpack
       ['@babel/preset-react', { runtime: 'automatic' }],
       '@babel/preset-typescript',
     ],
@@ -75,7 +69,8 @@ function webpackConfig(addons: Addon[]): Configuration {
   for (const addon of addons) babel = merge(babel, addon.getBabelSettings?.() ?? {});
 
   let config: Configuration = {
-    mode: 'production',
+    mode: isDev ? 'development' : 'production',
+    cache: { type: 'filesystem', cacheDirectory: path.join(cacheDir, 'webpack') }, // Makes rebuilds fast
     resolve: { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
     module: {
       rules: [{ test: /\.(ts|js)x?$/, exclude: /node_modules/, use: { loader: 'babel-loader', options: babel } }],

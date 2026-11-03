@@ -22,6 +22,11 @@ app.post('/tasks', (req, res) => {
   }
 });
 
+// Rendered in the browser: see `export const render = 'client'` in the view
+app.get('/tasks/search', (req, res) => {
+  res.render('tasks/search', { tasks: Tasks.findAll() });
+});
+
 app.get('/tasks/:id', (req, res) => {
   const task = Tasks.findById(Number(req.params.id));
   if (!task) return notFound(req, res);
