@@ -22,7 +22,7 @@
   "scripts": {
     "build": "rimraf lib && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
-    "test": "npm run build && nodemon test/index.ts",
+    "test": "node -r ./example/hello-world/register.js --test \"test/**/*.test.ts\"",
     "dev": "cross-env NODE_ENV=development nodemon --watch src --watch example/hello-world/src --ext ts,tsx --exec \"node -r dotenv/config -r ./example/hello-world/register.js\" example/hello-world/src/index.ts"
   },
   "repository": {
