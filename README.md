@@ -142,6 +142,7 @@ Rules for both modes:
 
 - **Props must survive `JSON.stringify`.** They are sent to the browser as JSON, so a `Date` arrives as a string. Use `new Date(prop)` if you need a date again.
 - **Props are public.** Everything you pass to `res.render()` ends up in the page source. Don't pass secrets.
+- **View code is public, and so is everything it imports.** Every view is bundled for the browser, even server views, so any module a view imports is served at `/assets`. Don't import modules that hold secrets, such as database or API config, into views; load that data in the route and pass only what the view needs as props. `import type` is safe, because types are removed from the bundle.
 - **Server views must render the same HTML on both sides.** If the browser renders something different (for example, `Date.now()`, `Math.random()` or a local time zone), React shows a hydration warning and re-renders the page. Put browser-only code in `useEffect` or an event handler.
 
 TypeScript users can type the setting: `export const render: RenderMode = 'client'` (`import type { RenderMode } from 'the-ref-framework'`).

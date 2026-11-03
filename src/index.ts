@@ -44,7 +44,9 @@ export default function ref(app: Express, options: RefOptions = {}): void {
   const viewsPath = path.resolve(options.views ?? app.get('views'));
   const extension = options.extension ?? 'tsx';
   const addons = options.addons ?? [];
-  const isDev = app.get('env') === 'development';
+  // Not app.get('env'): Express falls back to "development" when NODE_ENV is unset, which would
+  // rebuild bundles on every request on a production server that forgot to set it.
+  const isDev = process.env.NODE_ENV === 'development';
 
   // Start fresh in development, so no old bundles are served
   if (isDev) fs.rmSync(CACHE_DIR, { recursive: true, force: true });
@@ -71,7 +73,7 @@ export default function ref(app: Express, options: RefOptions = {}): void {
       bundle(viewFile, mode),
       mode === 'server' ? serverHtml(view.default ?? view, props) : EMPTY_PAGE,
     ]);
-    return html.replace('</body>', `${scripts(scriptUrl, props)}</body>`);
+    return beforeBodyEnd(html, scripts(scriptUrl, props));
   }
 
   /** Renders a view to HTML on the server and lets addons change it. */
@@ -103,6 +105,15 @@ function scripts(scriptUrl: string, props: object): string {
   // Escape "<" so a prop like "</script>" can't end the tag early
   const json = JSON.stringify(props).replace(/</g, '\\u003c');
   return `<script id="ref-props" type="application/json">${json}</script><script src="${scriptUrl}"></script>`;
+}
+
+/**
+ * Inserts tags before the last "</body>". Not String.replace with a string: it would expand
+ * "$`", "$'" and "$&" found in the props, pasting raw page HTML into the props script.
+ */
+function beforeBodyEnd(html: string, tags: string): string {
+  const end = html.lastIndexOf('</body>');
+  return end === -1 ? html + tags : html.slice(0, end) + tags + html.slice(end);
 }
 
 /** Removes cached modules in a folder, so the next require() reads them from disk again. */
